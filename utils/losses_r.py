@@ -512,7 +512,7 @@ class CE_DiceLoss_r(nn.Module):
         super(CE_DiceLoss_r, self).__init__()
         self.smooth = smooth
         self.dice = GDiceLossV2()
-        self.cross_entropy = nn.CrossEntropyLoss(weight=weight, reduction=reduction, ignore_index=ignore_index)
+        self.cross_entropy = nn.CrossEntropyLoss(weight=None, reduction=reduction, ignore_index=ignore_index)
     
     def forward(self, output, target):
         CE_loss = self.cross_entropy(output, target)*weight[0]
