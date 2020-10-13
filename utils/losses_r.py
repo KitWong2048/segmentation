@@ -517,4 +517,4 @@ class CE_DiceLoss_r(nn.Module):
     def forward(self, output, target):
         CE_loss = self.cross_entropy(output, target)*weight[0]
         dice_loss = self.dice(output, target)*weight[1]
-        return (CE_loss + dice_loss) /= (weight[0] + weight[1])
+        return (CE_loss + dice_loss) / (weight[0] + weight[1])
