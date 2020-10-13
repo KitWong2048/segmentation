@@ -54,13 +54,14 @@
         }
     },
 
-    "loss": "CE_DiceLoss_r",
+    "loss": "CE_GDiceLoss",
     "ignore_index": 255,
     "lr_scheduler": {
         "type": "CosineWithRestarts",
         "args": {
             "t_max": 10,
-            "eta_min": 1e-5
+            "eta_min": 1e-5,
+            "factor": 1
         }
     },
 

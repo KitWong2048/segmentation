@@ -6,7 +6,7 @@ import dataloaders
 import models
 import inspect
 import math
-from utils import losses_r
+import losses
 from utils import Logger
 from utils.torchsummary import summary
 from trainer import Trainer
@@ -30,7 +30,7 @@ def main(config, resume):
     # print(f'\n{model}\n')
 
     # LOSS
-    loss = getattr(losses_r, config['loss'])(ignore_index = config['ignore_index'])
+    loss = getattr(losses, config['loss'])(ignore_index = config['ignore_index'])
 
     # TRAINING
     trainer = Trainer(
