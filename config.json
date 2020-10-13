@@ -19,8 +19,8 @@
         "args":{
             "data_dir": "/content/segmentation_data",
             "batch_size": 32,
-            "base_size": 196,
-            "crop_size": 196,
+            "base_size": 256,
+            "crop_size": 256,
             "augment": true,
             "shuffle": true,
             "scale": true,
