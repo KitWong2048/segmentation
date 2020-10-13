@@ -17,7 +17,7 @@
     "train_loader": {
         "type": "RIS",
         "args":{
-            "data_dir": "/home/mumu/src/rsi",
+            "data_dir": "/content/segmentation_data",
             "batch_size": 16,
             "base_size": 196,
             "crop_size": 196,
@@ -35,7 +35,7 @@
     "val_loader": {
         "type": "RIS",
         "args":{
-            "data_dir": "/home/mumu/src/rsi",
+            "data_dir": "/content/segmentation_data",
             "batch_size": 8,
             "crop_size": 256,
             "val": true,
