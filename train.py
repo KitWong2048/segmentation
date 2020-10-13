@@ -26,7 +26,7 @@ def main(config, resume):
 
     # MODEL
     #model = get_instance(models, 'arch', config, train_loader.dataset.num_classes, True)
-    model = getattr(models, config['arch']) (train_loader.dataset.num_classes, True)
+    model = getattr(models, config['arch']['type']) (train_loader.dataset.num_classes, True)
     # print(f'\n{model}\n')
 
     # LOSS
