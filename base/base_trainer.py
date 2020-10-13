@@ -10,6 +10,7 @@ from utils import logger
 import utils.lr_scheduler
 from utils.sync_batchnorm import convert_model
 from utils.sync_batchnorm import DataParallelWithCallback
+from shutil import copyfile
 
 def get_instance(module, name, config, *args):
     # GET THE CORRESPONDING CLASS / FCT 
@@ -155,6 +156,11 @@ class BaseTrainer:
             filename = os.path.join(self.checkpoint_dir, f'best_model.pth')
             torch.save(state, filename)
             self.logger.info("Saving current best: best_model.pth")
+            
+            #save to google cloud
+            dest_rul = os.path.join('/content/drive/My Drive/segmentation', 'best_model.pth')
+            copyfile(filename, dest_rul)
+
 
     def _resume_checkpoint(self, resume_path):
         self.logger.info(f'Loading checkpoint : {resume_path}')
