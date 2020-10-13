@@ -18,7 +18,7 @@
         "type": "RIS",
         "args":{
             "data_dir": "/content/segmentation_data",
-            "batch_size": 16,
+            "batch_size": 32,
             "base_size": 196,
             "crop_size": 196,
             "augment": true,

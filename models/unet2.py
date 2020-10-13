@@ -163,7 +163,7 @@ class UNet_BN(nn.Module):
     def __init__(self,  n_classes=10, bn=False):
         super().__init__()
         self.bn = bn
-        self.conv1 = nn.Conv2d(12, 32, 3, padding=1)
+        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
         if self.bn: self.bn1 = nn.BatchNorm2d(32)
         self.conv2 = nn.Conv2d(32, 32, 3, padding=1)
         if self.bn: self.bn2 = nn.BatchNorm2d(32)
