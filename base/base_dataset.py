@@ -70,9 +70,9 @@ class BaseDataSet(Dataset):
             self.image_augmenter = None
             self.resizer = None
 
-            #self.resizer = albu.Compose([
-            #                albu.Resize(crop_size, crop_size, p=1)
-            #                ])
+            self.resizer = albu.Compose([
+                            albu.Resize(crop_size, crop_size, p=1)
+                            ])
 
         cv2.setNumThreads(0)
 
