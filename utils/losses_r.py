@@ -101,8 +101,6 @@ class GDiceLoss(nn.Module):
         with torch.no_grad():
             if len(shp_x) != len(shp_y):
                 gt = gt.view((shp_y[0], 1, *shp_y[1:]))
-
-            print(gt.shape)
             
             if all([i == j for i, j in zip(net_output.shape, gt.shape)]):
                 # if this is the case then gt is probably already a one hot encoding
@@ -518,6 +516,6 @@ class CE_DiceLoss_r(nn.Module):
         self.weight = weight
         
     def forward(self, output, target):
-        CE_loss = self.cross_entropy(output, target)*self.weight[0]
-        dice_loss = self.dice(output, target)*self.weight[1]
-        return (CE_loss + dice_loss) / (self.weight[0] + self.weight[1])
+        CE_loss = self.cross_entropy(output, target)
+        dice_loss = self.dice(output, target)
+        return CE_loss + dice_loss
