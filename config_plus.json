@@ -19,8 +19,8 @@
         "args":{
             "data_dir": "/content/segmentation_data",
             "batch_size": 32,
-            "base_size": 224,
-            "crop_size": 224,
+            "base_size": 208,
+            "crop_size": 208,
             "augment": true,
             "shuffle": true,
             "scale": true,
@@ -48,7 +48,7 @@
         "type": "Adam",
         "differential_lr": false,
         "args":{
-            "lr": 0.001
+            "lr": 0.01
         }
     },
 
