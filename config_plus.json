@@ -19,8 +19,8 @@
         "args":{
             "data_dir": "/content/segmentation_data",
             "batch_size": 32,
-            "base_size": 208,
-            "crop_size": 208,
+            "base_size": 224,
+            "crop_size": 224,
             "augment": true,
             "shuffle": true,
             "scale": true,
@@ -48,7 +48,7 @@
         "type": "Adam",
         "differential_lr": false,
         "args":{
-            "lr": 0.01
+            "lr": 0.001
         }
     },
 
@@ -66,7 +66,7 @@
     "trainer": {
         "epochs": 80,
         "save_dir": "saved/",
-        "save_period": 10,
+        "save_period": 1,
   
         "monitor": "max Mean_IoU",
         "early_stop": 10,
@@ -76,6 +76,6 @@
         "log_per_iter": 100,
 
         "val": true,
-        "val_per_epochs": 5
+        "val_per_epochs": 1
     }
 }

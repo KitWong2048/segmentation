@@ -99,7 +99,7 @@ class CE_DiceLoss(nn.Module):
         return self.ce_weight * CE_loss + self.dice_weight * dice_loss
 
 class CE_GDiceLoss(nn.Module):
-    def __init__(self, dice_weight=0.9, ce_weight=0.1, ignore_index=255):
+    def __init__(self, dice_weight=0.5, ce_weight=0.5, ignore_index=255):
         super(CE_GDiceLoss, self).__init__()
         self.dice_weight = dice_weight
         self.ce_weight = ce_weight
