@@ -38,15 +38,15 @@ class BaseDataSet(Dataset):
                             ])
 
             self.image_augmenter = albu.Compose([
-                            albu.OneOf([
-                                albu.GaussNoise(var_limit=(0, 15)),
-                                albu.IAAAdditiveGaussianNoise(),
-                                ], p=0.01),
-                            albu.OneOf([
+                            #albu.OneOf([
+                            #    albu.GaussNoise(var_limit=(0, 15)),
+                            #    albu.IAAAdditiveGaussianNoise(),
+                            #    ], p=0.01),
+                            #albu.OneOf([
                                 # albu.MotionBlur(blur_limit=3),
-                                albu.GaussianBlur(3),
-                                albu.Blur(blur_limit=3),
-                                ], p=0.01),
+                            #    albu.GaussianBlur(3),
+                            #    albu.Blur(blur_limit=3),
+                            #    ], p=0.01),
                             albu.RandomBrightnessContrast(0.15,0.15, p=0.1),
                             # albu.OneOf([
                             #     albu.CLAHE(clip_limit=2),# 
