@@ -151,6 +151,9 @@ class BaseTrainer:
         filename = os.path.join(self.checkpoint_dir, f'checkpoint-epoch{epoch}.pth')
         self.logger.info(f'\nSaving a checkpoint: {filename} ...') 
         torch.save(state, filename)
+        
+        dest_rul = os.path.join('/content/drive/My Drive/segmentation',  f'checkpoint-epoch{epoch}.pth')
+        copyfile(filename, dest_rul)
 
         if save_best:
             filename = os.path.join(self.checkpoint_dir, f'best_model.pth')
