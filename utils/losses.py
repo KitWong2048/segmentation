@@ -88,17 +88,3 @@ class LovaszSoftmax(nn.Module):
         logits = F.softmax(output, dim=1)
         loss = lovasz_softmax(logits, target, ignore=self.ignore_index)
         return loss
-
-class CE_DiceLoss_r(nn.Module):
-    def __init__(self, smooth=1, reduction='mean', ignore_index=255, weight=[0.1, 0.9]):
-        super(CE_DiceLoss_r, self).__init__()
-        self.smooth = smooth
-        self.dice = DiceLoss(ignore_index=ignore_index)
-        self.cross_entropy = nn.CrossEntropyLoss(weight=weight, reduction=reduction, ignore_index=ignore_index)
-    
-    def forward(self, output, target):
-        CE_loss = self.cross_entropy(output, target)*weight[0]
-        dice_loss = self.dice(output, target)*weight[1]
-        return (CE_loss + dice_loss) /= (weight[0] + weight[1])
-        
-        

@@ -1,10 +1,10 @@
 {
-    "name": "ResUnet",
-    "n_gpu": 2,
+    "name": "VGGUnet",
+    "n_gpu": 1,
     "use_synch_bn": true,
 
     "arch": {
-        "type": "ResUnet",
+        "type": "VGGUnet",
         "args": {
             "backbone": "resnet50",
             "freeze_bn": false,
@@ -15,10 +15,10 @@
     "train_loader": {
         "type": "RSI",
         "args":{
-            "data_dir": "/home/mumu/src/rsi",
-            "batch_size": 30,
-            "base_size": 256,
-            "crop_size": 256,
+            "data_dir": "/content/segmentation_data",
+            "batch_size": 16,
+            "base_size": 224,
+            "crop_size": 192,
             "augment": true,
             "shuffle": true,
             "scale": true,
@@ -26,16 +26,16 @@
             "rotate": true,
             "blur": false,
             "split": "train_all",
-            "num_workers": 8
+            "num_workers": 4
         }
     },
 
     "val_loader": {
         "type": "RSI",
         "args":{
-            "data_dir": "/home/mumu/src/rsi",
+            "data_dir": "/content/segmentation_data",
             "batch_size": 8,
-            "crop_size": 256,
+            "crop_size": 192,
             "val": true,
             "split": "val",
             "num_workers": 4
@@ -46,34 +46,34 @@
         "type": "SGD",
         "differential_lr": false,
         "args":{
-            "lr": 0.001,
+            "lr": 0.01,
             "weight_decay": 1e-4,
             "momentum": 0.9
         }
     },
 
-    "loss": "CE_LovaszLoss",
+    "loss": "CE_DiceLoss",
     "ignore_index": 255,
     "lr_scheduler": {
         "type": "CosineWithRestarts",
         "args": {
             "t_max": 10,
-            "eta_min": 1e-6,
+            "eta_min": 1e-5,
             "factor": 1
         }
     },
 
     "trainer": {
-        "epochs": 120,
+        "epochs": 80,
         "save_dir": "saved/",
-        "save_period": 5,
+        "save_period": 10,
   
         "monitor": "max Mean_IoU",
         "early_stop": 10,
         
         "tensorboard": true,
         "log_dir": "saved/runs",
-        "log_per_iter": 200,
+        "log_per_iter": 100,
 
         "val": true,
         "val_per_epochs": 5

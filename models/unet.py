@@ -6,6 +6,37 @@ import torchvision.models as models
 import torch.nn.functional as F
 from itertools import chain
 
+class ASKCFuse(nn.Module):
+    def __init__(self, channels=64, r=4):
+        super().__init__()
+        inter_channels = int(channels // r)
+
+        self.local_att = nn.Sequential(
+            nn.Conv2d(inter_channels, kernel_size=1, stride=1, padding=0),
+            nn.BatchNorm2d(),
+            nn.ReLU(),
+            nn.Conv2d(channels, kernel_size=1, stride=1, padding=0),
+            nn.BatchNorm2d()
+        )
+
+        self.global_att = nn.Sequential(
+            nn.AdaptiveAvgPool2d(),
+            nn.Conv2d(inter_channels, kernel_size=1, stride=1, padding=0),
+            nn.BatchNorm2d(),
+            nn.ReLU(),
+            nn.Conv2d(channels, kernel_size=1, stride=1, padding=0),
+            nn.BatchNorm2d()
+        )
+
+    def forward(self, x, residual):
+        xa = x + residual
+        xl = self.local_add(xa)
+        xg = self.global_att(xa)
+        xlg = torch.add(xl,  xg)
+        wei = F.sigmoid(xlg)
+        xo = 2 * torch.mul(x, wei) + 2 * torch.mul(residual, 1-wei)
+        return xo
+
 class encoder(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(encoder, self).__init__()
@@ -68,8 +99,9 @@ class DecoderRes(nn.Module):
         self.block2 = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True),
+            # nn.ReLU(inplace=True),
         )
+        self._initialize_weights()
 
     def forward(self, *args):
         if len(args) > 1:
@@ -78,8 +110,74 @@ class DecoderRes(nn.Module):
             x = args[0]
         x = self.block(x)
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
-        return self.block2(x)
+        x = self.block2(x)
+        return x
+    
+    def _initialize_weights(self):
+        for module in self.modules():
+            if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
+                nn.init.kaiming_normal_(module.weight)
+                if module.bias is not None:
+                    module.bias.data.zero_()
+            elif isinstance(module, nn.BatchNorm2d):
+                module.weight.data.fill_(1)
+                module.bias.data.zero_()
 
+
+class DecoderSC(nn.Module):
+    def __init__(self, in_channels, middle_channels, out_channels):
+        super(DecoderSC, self).__init__()
+        self.block = nn.Sequential(
+            nn.Conv2d(in_channels, middle_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(middle_channels),
+            nn.ReLU(inplace=True),
+        )
+
+        self.block2 = nn.Sequential(
+            nn.Conv2d(middle_channels, out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+        )
+
+        self.spatial_gate = nn.Sequential(
+            nn.Conv2d(out_channels, 1, kernel_size=1, padding=0),
+            nn.BatchNorm2d(1),
+            nn.Sigmoid()
+        )
+
+        self.channel_gate = nn.Sequential(
+            nn.Conv2d(out_channels, out_channels//2, kernel_size=1, padding=0),
+            nn.BatchNorm2d(out_channels//2),
+            nn.ReLU(),
+            nn.Conv2d(out_channels//2, out_channels, kernel_size=1, padding=0),
+            nn.BatchNorm2d(out_channels),
+            nn.Sigmoid()
+        )
+        self._initialize_weights()
+
+    def forward(self, *args):
+        if len(args) > 1:
+            x = torch.cat(args, 1)
+        else:
+            x = args[0]
+        x = self.block(x)
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
+        x = self.block2(x)
+        g1 = self.spatial_gate(x)
+
+        g2 = self.channel_gate(F.avg_pool2d(x, x.size()[2:]))
+        x = g1*x + g2*x
+        return x
+    
+    def _initialize_weights(self):
+        for module in self.modules():
+            if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
+                nn.init.kaiming_normal_(module.weight)
+                if module.bias is not None:
+                    module.bias.data.zero_()
+            elif isinstance(module, nn.BatchNorm2d):
+                module.weight.data.fill_(1)
+                module.bias.data.zero_()
 
 
 class UNet(BaseModel):
@@ -155,15 +253,15 @@ class ResUnet(BaseModel):
         self.down4 = model.layer3 # 1024
         self.middle_conv = nn.Sequential(
             nn.MaxPool2d(2, 2),
-            DecoderRes(1024, 512)
+            DecoderSC(1024, 512, 64)
         )
-        self.up1 = DecoderRes(512+1024, 512)
-        self.up2 = DecoderRes(512+512, 256)
-        self.up3 = DecoderRes(256+256, 128)
-        self.up4 = DecoderRes(128+128, 64)
+        self.up1 = DecoderSC(64+1024, 512, 64)
+        self.up2 = DecoderSC(64+512, 256, 64)
+        self.up3 = DecoderSC(64+256, 128, 64)
+        self.up4 = DecoderSC(64+128, 96, 64)
         # self.final_conv = nn.Conv2d(64, num_classes, kernel_size=1)
         self.final_conv = nn.Sequential(
-            nn.Conv2d(64+128+256+512, 64, kernel_size=1, padding=0),
+            nn.Conv2d(64+64+64+64, 64, kernel_size=1, padding=0),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             nn.Conv2d(64, num_classes, kernel_size=1)
@@ -230,22 +328,20 @@ class MUnet(BaseModel):
                                     model.features[11],
                                     model.features[12],
                                     model.features[13]) # 96 - 16
-        self.down5 = nn.Sequential(model.features[14],
-                                    model.features[15],
-                                    model.features[16],
-                                    model.features[17]) # 320 - 8
         self.middle_conv = nn.Sequential(
-            nn.MaxPool2d(2, 2),
-            DecoderRes(320, 96)
+            model.features[14],
+            model.features[15],
+            model.features[16],
+            model.features[17], # 320 - 8
+            DecoderRes(320, 160)
         )
-        self.up1 = DecoderRes(96+320, 160)
-        self.up2 = DecoderRes(160+96, 96)
-        self.up3 = DecoderRes(96+32, 32)
-        self.up4 = DecoderRes(32+24, 24)
-        self.up5 = DecoderRes(24+16, 16)
+        self.up1 = DecoderRes(160+96, 128)
+        self.up2 = DecoderRes(128+32, 64)
+        self.up3 = DecoderRes(64+24, 32)
+        self.up4 = DecoderRes(32+16, 16)
         # self.final_conv = nn.Conv2d(64, num_classes, kernel_size=1)
         self.final_conv = nn.Sequential(
-            nn.Conv2d(16+24+32+96+160, 64, kernel_size=1, padding=0),
+            nn.Conv2d(16+32+64+128, 64, kernel_size=1, padding=0),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             nn.Conv2d(64, num_classes, kernel_size=1)
@@ -257,19 +353,132 @@ class MUnet(BaseModel):
         x2 = self.down2(x1)
         x3 = self.down3(x2)
         x4 = self.down4(x3)
-        x5 = self.down5(x4)
-        c = self.middle_conv(x5)
-        d5 = self.up1(x5, c)
-        d4 = self.up2(x4, d5)
-        d3 = self.up3(x3, d4)
-        d2 = self.up4(x2, d3)
-        d1 = self.up5(x1, d2)
+        c = self.middle_conv(x4)
+        d4 = self.up1(x4, c)
+        d3 = self.up2(x3, d4)
+        d2 = self.up3(x2, d3)
+        d1 = self.up4(x1, d2)
 
-        u5 = F.interpolate(d5, scale_factor=16, mode='bilinear', align_corners=False)
         u4 = F.interpolate(d4, scale_factor=8, mode='bilinear', align_corners=False)
         u3 = F.interpolate(d3, scale_factor=4, mode='bilinear', align_corners=False)
         u2 = F.interpolate(d2, scale_factor=2, mode='bilinear', align_corners=False)
-        d = torch.cat((d1, u2, u3, u4, u5), 1)
+        d = torch.cat((d1, u2, u3, u4), 1)
+        x = self.final_conv(d)
+        return x
+
+    def get_backbone_params(self):
+        # There is no backbone for unet, all the parameters are trained from scratch
+        return []
+
+    def get_decoder_params(self):
+        return self.parameters()
+
+class MSCUnet(BaseModel):
+    def __init__(self, num_classes, in_channels=3, freeze_bn=False, **_):
+        super(MSCUnet, self).__init__()
+        model = models.mobilenet_v2(pretrained=True)
+
+        self.down1 = nn.Sequential(model.features[0],
+                                    model.features[1]) # 16 - 128
+        self.down2 = nn.Sequential(model.features[2],
+                                    model.features[3]) # 24 - 64
+        self.down3 = nn.Sequential(model.features[4],
+                                    model.features[5],
+                                    model.features[6]) # 32 - 32
+        self.down4 = nn.Sequential(model.features[7],
+                                    model.features[8],
+                                    model.features[9],
+                                    model.features[10],
+                                    model.features[11],
+                                    model.features[12],
+                                    model.features[13]) # 96 - 16
+        self.middle_conv = nn.Sequential(
+            model.features[14],
+            model.features[15],
+            model.features[16],
+            model.features[17], # 320 - 8
+            DecoderSC(320, 160, 160)
+        )
+        self.up1 = DecoderSC(160+96, 128, 128)
+        self.up2 = DecoderSC(128+32, 64, 64)
+        self.up3 = DecoderSC(64+24, 32, 32)
+        self.up4 = DecoderSC(32+16, 16, 16)
+        # self.final_conv = nn.Conv2d(64, num_classes, kernel_size=1)
+        self.final_conv = nn.Sequential(
+            nn.Conv2d(16+32+64+128, 64, kernel_size=1, padding=0),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, num_classes, kernel_size=1)
+        )
+
+
+    def forward(self, x):
+        x1 = self.down1(x)
+        x2 = self.down2(x1)
+        x3 = self.down3(x2)
+        x4 = self.down4(x3)
+        c = self.middle_conv(x4)
+        d4 = self.up1(x4, c)
+        d3 = self.up2(x3, d4)
+        d2 = self.up3(x2, d3)
+        d1 = self.up4(x1, d2)
+
+        u4 = F.interpolate(d4, scale_factor=8, mode='bilinear', align_corners=False)
+        u3 = F.interpolate(d3, scale_factor=4, mode='bilinear', align_corners=False)
+        u2 = F.interpolate(d2, scale_factor=2, mode='bilinear', align_corners=False)
+        d = torch.cat((d1, u2, u3, u4), 1)
+        x = self.final_conv(d)
+        return x
+
+    def get_backbone_params(self):
+        # There is no backbone for unet, all the parameters are trained from scratch
+        return []
+
+    def get_decoder_params(self):
+        return self.parameters()
+
+
+class VGGUnet(BaseModel):
+    def __init__(self, num_classes, in_channels=3, freeze_bn=False, **_):
+        super(VGGUnet, self).__init__()
+        model = models.vgg13_bn(pretrained=True)
+
+        self.down1 = nn.Sequential(model.features[0:7]) # 64 - 128
+        self.down2 = nn.Sequential(model.features[7:14]) # 128 - 64
+        self.down3 = nn.Sequential(model.features[14:21]) # 256 - 32
+        self.down4 = nn.Sequential(model.features[21:28]) # 512 - 16
+        self.middle_conv = nn.Sequential(
+            model.features[28:35], # 512 - 8
+            DecoderSC(512, 256, 64)
+        )
+        self.up1 = DecoderSC(64+512, 256, 64)
+        self.up2 = DecoderSC(64+256, 128, 64)
+        self.up3 = DecoderSC(64+128, 96, 64)
+        self.up4 = DecoderSC(64+64, 64, 32)
+        # self.final_conv = nn.Conv2d(64, num_classes, kernel_size=1)
+        self.final_conv = nn.Sequential(
+            nn.Conv2d(32+64+64+64, 64, kernel_size=1, padding=0),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, num_classes, kernel_size=1)
+        )
+
+
+    def forward(self, x):
+        x1 = self.down1(x)
+        x2 = self.down2(x1)
+        x3 = self.down3(x2)
+        x4 = self.down4(x3)
+        c = self.middle_conv(x4)
+        d4 = self.up1(x4, c)
+        d3 = self.up2(x3, d4)
+        d2 = self.up3(x2, d3)
+        d1 = self.up4(x1, d2)
+
+        u4 = F.interpolate(d4, scale_factor=8, mode='bilinear', align_corners=False)
+        u3 = F.interpolate(d3, scale_factor=4, mode='bilinear', align_corners=False)
+        u2 = F.interpolate(d2, scale_factor=2, mode='bilinear', align_corners=False)
+        d = torch.cat((d1, u2, u3, u4), 1)
         x = self.final_conv(d)
         return x
 

@@ -3,6 +3,7 @@ import math
 import torch
 from  torch.optim.lr_scheduler import _LRScheduler
 
+
 class Poly(_LRScheduler):
     def __init__(self, optimizer, num_epochs, iters_per_epoch=0, warmup_epochs=0, last_epoch=-1):
         self.iters_per_epoch = iters_per_epoch
@@ -146,28 +147,17 @@ if __name__ == "__main__":
     }
     optimizer = torch.optim.SGD(params=resnet.parameters(), **params)
 
-    epochs = 2
+    epochs = 20
     iters_per_epoch = 100
     lrs = []
     mementums = []
-    lr_scheduler = OneCycle(optimizer, epochs, iters_per_epoch)
+    lr_scheduler = CosineWithRestarts(optimizer, 10)
     #lr_scheduler = Poly(optimizer, epochs, iters_per_epoch)
 
     for epoch in range(epochs):
-        for i in range(iters_per_epoch):
-            lr_scheduler.step(epoch=epoch)
-            lr_scheduler(optimizer, i, epoch)
-            lrs.append(optimizer.param_groups[0]['lr'])
-            mementums.append(optimizer.param_groups[0]['momentum'])
+        lrs.append((epoch, optimizer.param_groups[0]['lr']))
+        lr_scheduler.step(epoch=epoch)
+        # mementums.append(optimizer.param_groups[0]['momentum'])
 
-    plt.ylabel("learning rate")
-    plt.xlabel("iteration")
-    plt.plot(lrs)
-    plt.show()
-
-    plt.ylabel("momentum")
-    plt.xlabel("iteration")
-    plt.plot(mementums)
-    plt.show()
-
+    print(lrs) 
     

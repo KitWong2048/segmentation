@@ -7,9 +7,17 @@ import models
 import inspect
 import math
 import losses
+import numpy as np
+import random
 from utils import Logger
 from utils.torchsummary import summary
 from trainer import Trainer
+
+seed = 1000000
+np.random.seed(seed)
+random.seed(seed)
+torch.random.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
 
 def get_instance(module, name, config, *args):
     # GET THE CORRESPONDING CLASS / FCT 
@@ -25,8 +33,7 @@ def main(config, resume):
     val_loader = get_instance(dataloaders, 'val_loader', config)
 
     # MODEL
-    #model = get_instance(models, 'arch', config, train_loader.dataset.num_classes, True)
-    model = getattr(models, config['arch']['type']) (train_loader.dataset.num_classes, True)
+    model = get_instance(models, 'arch', config, train_loader.dataset.num_classes)
     # print(f'\n{model}\n')
 
     # LOSS
@@ -56,8 +63,8 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     config = json.load(open(args.config))
-    if args.resume:
-        config = torch.load(args.resume)['config']
+    # if args.resume:
+    #     config = torch.load(args.resume)['config']
     if args.device:
         os.environ["CUDA_VISIBLE_DEVICES"] = args.device
     

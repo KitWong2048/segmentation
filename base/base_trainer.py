@@ -10,7 +10,6 @@ from utils import logger
 import utils.lr_scheduler
 from utils.sync_batchnorm import convert_model
 from utils.sync_batchnorm import DataParallelWithCallback
-from shutil import copyfile
 
 def get_instance(module, name, config, *args):
     # GET THE CORRESPONDING CLASS / FCT 
@@ -27,7 +26,7 @@ class BaseTrainer:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.do_validation = self.config['trainer']['val']
         self.start_epoch = 1
-        self.improved = False
+        self.improved = True
 
         # SETTING THE DEVICE
         self.device, availble_gpus = self._get_available_devices(self.config['n_gpu'])
@@ -57,7 +56,7 @@ class BaseTrainer:
             trainable_params = filter(lambda p:p.requires_grad, self.model.parameters())
         self.optimizer = get_instance(torch.optim, 'optimizer', config, trainable_params)
         if config['lr_scheduler']['type'] == "CosineWithRestarts":
-            self.lr_scheduler = getattr(utils.lr_scheduler, config['lr_scheduler']['type'])(self.optimizer, config['lr_scheduler']['args']['t_max'])
+            self.lr_scheduler = getattr(utils.lr_scheduler, config['lr_scheduler']['type'])(self.optimizer, **config['lr_scheduler']['args'])
         else:
             self.lr_scheduler = getattr(utils.lr_scheduler, config['lr_scheduler']['type'])(self.optimizer, self.epochs, len(train_loader))
 
@@ -151,19 +150,12 @@ class BaseTrainer:
         filename = os.path.join(self.checkpoint_dir, f'checkpoint-epoch{epoch}.pth')
         self.logger.info(f'\nSaving a checkpoint: {filename} ...') 
         torch.save(state, filename)
-        
-        dest_rul = os.path.join('/content/drive/My Drive/segmentation',  f'checkpoint-epoch{epoch}.pth')
-        copyfile(filename, dest_rul)
+        torch.save(self.model.state_dict(), os.path.join(self.checkpoint_dir, f'model-epoch{epoch}.pth'))
 
         if save_best:
             filename = os.path.join(self.checkpoint_dir, f'best_model.pth')
             torch.save(state, filename)
             self.logger.info("Saving current best: best_model.pth")
-            
-            #save to google cloud
-            dest_rul = os.path.join('/content/drive/My Drive/segmentation', 'best_model.pth')
-            copyfile(filename, dest_rul)
-
 
     def _resume_checkpoint(self, resume_path):
         self.logger.info(f'Loading checkpoint : {resume_path}')
@@ -180,11 +172,12 @@ class BaseTrainer:
 
         if checkpoint['config']['optimizer']['type'] != self.config['optimizer']['type']:
             self.logger.warning({'Warning! Current optimizer is not the same as the one in the checkpoint'})
-        self.optimizer.load_state_dict(checkpoint['optimizer'])
+        # self.optimizer.load_state_dict(checkpoint['optimizer'])
         # if self.lr_scheduler:
         #     self.lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
 
-        self.train_logger = checkpoint['logger']
+        # self.train_logger = checkpoint['logger']
+        # self.train_logger = Logger()
         self.logger.info(f'Checkpoint <{resume_path}> (epoch {self.start_epoch}) was loaded')
 
     def _train_epoch(self, epoch):
