@@ -11,8 +11,8 @@ import utils.lr_scheduler
 from utils.sync_batchnorm import convert_model
 from utils.sync_batchnorm import DataParallelWithCallback
 
-import torch_xla.core.xla_model as xm
-import torch_xla.distributed.data_parallel as dp
+#import torch_xla.core.xla_model as xm
+#import torch_xla.distributed.data_parallel as dp
 
 
 
