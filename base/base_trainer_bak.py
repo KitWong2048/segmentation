@@ -11,11 +11,6 @@ import utils.lr_scheduler
 from utils.sync_batchnorm import convert_model
 from utils.sync_batchnorm import DataParallelWithCallback
 
-import torch_xla.core.xla_model as xm
-import torch_xla.distributed.data_parallel as dp
-
-
-
 def get_instance(module, name, config, *args):
     # GET THE CORRESPONDING CLASS / FCT 
     return getattr(module, config[name]['type'])(*args, **config[name]['args'])
@@ -34,7 +29,6 @@ class BaseTrainer:
         self.improved = True
 
         # SETTING THE DEVICE
-        '''
         self.device, availble_gpus = self._get_available_devices(self.config['n_gpu'])
         if config["use_synch_bn"]:
             self.model = convert_model(self.model)
@@ -42,12 +36,6 @@ class BaseTrainer:
         else:
             self.model = torch.nn.DataParallel(self.model, device_ids=availble_gpus)
         self.model.to(self.device)
-        '''
-        
-        self.device = xm.get_xla_supported_devices(devkind=None, max_devices=None)
-        self.model = dp.DataParallel(self.model, device_ids=devices)
-        
-        
 
         # CONFIGS
         cfg_trainer = self.config['trainer']
@@ -56,8 +44,7 @@ class BaseTrainer:
 
         # OPTIMIZER
         if self.config['optimizer']['differential_lr']:
-            #if isinstance(self.model, torch.nn.DataParallel):
-            if isinstance(self.model, torch_xla.distributed.data_parallel.DataParallel):
+            if isinstance(self.model, torch.nn.DataParallel):
                 trainable_params = [{'params': filter(lambda p:p.requires_grad, self.model.module.get_decoder_params())},
                                     {'params': filter(lambda p:p.requires_grad, self.model.module.get_backbone_params()), 
                                     'lr': config['optimizer']['args']['lr'] / 10}]

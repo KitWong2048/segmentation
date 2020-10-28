@@ -9,6 +9,10 @@ from utils.helpers import colorize_mask
 from utils.metrics import eval_metrics, AverageMeter
 from tqdm import tqdm
 
+import torch_xla.core.xla_model as xm
+import torch_xla.distributed.data_parallel as dp
+
+
 class Trainer(BaseTrainer):
     def __init__(self, model, loss, resume, config, train_loader, val_loader=None, train_logger=None, prefetch=True):
         super(Trainer, self).__init__(model, loss, resume, config, train_loader, val_loader, train_logger)
@@ -27,22 +31,25 @@ class Trainer(BaseTrainer):
             transforms.Resize((400, 400)),
             transforms.ToTensor()])
         
+        
+        '''
         if self.device ==  torch.device('cpu'): prefetch = False
         if prefetch:
             self.train_loader = DataPrefetcher(train_loader, device=self.device)
             self.val_loader = DataPrefetcher(val_loader, device=self.device)
 
         torch.backends.cudnn.benchmark = True
-
+        '''
+        
     def _train_epoch(self, epoch):
         self.logger.info('\n')
         self.logger.info(f'Epoch: {epoch}')
         self.logger.info(f'Learning rate: {self.optimizer.param_groups[0]["lr"]}')
             
         self.model.train()
-        if self.config['arch']['args']['freeze_bn']:
-            if isinstance(self.model, torch.nn.DataParallel): self.model.module.freeze_bn()
-            else: self.model.freeze_bn()
+        #if self.config['arch']['args']['freeze_bn']:
+        #    if isinstance(self.model, torch.nn.DataParallel): self.model.module.freeze_bn()
+        #    else: self.model.freeze_bn()
         self.wrt_mode = 'train'
 
         # tic = time.time()
@@ -67,8 +74,8 @@ class Trainer(BaseTrainer):
                 assert output.size()[1] == self.num_classes 
                 loss = self.loss(output, target)
 
-            if isinstance(self.loss, torch.nn.DataParallel):
-                loss = loss.mean()
+            #if isinstance(self.loss, torch_xla.distributed.data_parallel.DataParallel):
+            #    loss = loss.mean()
             loss.backward()
             self.optimizer.step()
             self.total_loss.update(loss.item())
@@ -127,8 +134,8 @@ class Trainer(BaseTrainer):
                 # LOSS
                 output = self.model(data)
                 loss = self.loss(output, target)
-                if isinstance(self.loss, torch.nn.DataParallel):
-                    loss = loss.mean()
+                #if isinstance(self.loss, torch.nn.DataParallel):
+                #    loss = loss.mean()
                 self.total_loss.update(loss.item())
 
                 seg_metrics = eval_metrics(output, target, self.num_classes)

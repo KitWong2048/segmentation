@@ -11,7 +11,11 @@ import numpy as np
 import random
 from utils import Logger
 from utils.torchsummary import summary
-from trainer import Trainer
+
+
+import pytorch_lightning as pl
+from pl_model import pl_model
+
 
 seed = 1000000
 np.random.seed(seed)
@@ -23,7 +27,8 @@ def get_instance(module, name, config, *args):
     # GET THE CORRESPONDING CLASS / FCT 
     return getattr(module, config[name]['type'])(*args, **config[name]['args'])
 
-def main(config, resume):
+def main(config, arg):
+
     train_logger = Logger()
 
     # DATA LOADERS
@@ -33,23 +38,26 @@ def main(config, resume):
     val_loader = get_instance(dataloaders, 'val_loader', config)
 
     # MODEL
-    model = get_instance(models, 'arch', config, train_loader.dataset.num_classes)
+    net = get_instance(models, 'arch', config, train_loader.dataset.num_classes)
     # print(f'\n{model}\n')
 
     # LOSS
     loss = getattr(losses, config['loss'])(ignore_index = config['ignore_index'])
 
-    # TRAINING
-    trainer = Trainer(
-        model=model,
-        loss=loss,
-        resume=resume,
-        config=config,
-        train_loader=train_loader,
-        val_loader=val_loader,
-        train_logger=train_logger)
-
-    trainer.train()
+    config.num_classes = train_loader.dataset.num_classes
+    
+    model = pl_model(net, loss, config)
+    
+    
+    if arg.resume:
+        model.load_from_checkpoint(arg.resume)
+    
+    
+    trainer = pl.Trainer(default_root_dir=arg.checkpoints_folder)
+    trainer.fit(model=model,  train_dataloader=train_loader, val_dataloaders=val_loader )
+    
+    
+    
 
 if __name__=='__main__':
     # PARSE THE ARGS
@@ -60,12 +68,15 @@ if __name__=='__main__':
                         help='Path to the .pth model checkpoint to resume training')
     parser.add_argument('-d', '--device', default=None, type=str,
                            help='indices of GPUs to enable (default: all)')
+    parser.add_argument('-f', '--checkpoints_folder', default='/content/drive/My Drive/segmentation/checkpoints', type=str,
+                        help='folders for storing checkpoints')
+                        
     args = parser.parse_args()
 
     config = json.load(open(args.config))
     # if args.resume:
     #     config = torch.load(args.resume)['config']
-    if args.device:
-        os.environ["CUDA_VISIBLE_DEVICES"] = args.device
+    #if args.device:
+    #    os.environ["CUDA_VISIBLE_DEVICES"] = args.device
     
-    main(config, args.resume)
+    main(config, args)
