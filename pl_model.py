@@ -38,6 +38,7 @@ class pl_model(pl.LightningModule):
         self.model = model
         self.loss = loss
         
+        _reset_metrics()
 
   
 
