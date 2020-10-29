@@ -30,8 +30,7 @@ class pl_model(pl.LightningModule):
     def __init__(self, model, loss, hparams):
         super().__init__()
         
-        print(hparams)
-        self.save_hyperparameters(**hparams)
+        #self.save_hyperparameters(**hparams)
 
         self.num_classes = hparams.num_classes
         self.model = model
