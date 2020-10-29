@@ -84,7 +84,7 @@ class pl_model(pl.LightningModule):
         seg_metrics = self._get_seg_metrics()
         log = {'loss': self.total_loss.average, **seg_metrics}
         log_str = ''
-        for k, v in log:
+        for k, v in log.items():
             log_str += k+'：'+v+'\n'
         self.log('train_epoch_log', log_str, prog_bar=False)
                
@@ -111,7 +111,7 @@ class pl_model(pl.LightningModule):
         
         log = {'val_loss': self.total_loss.average, **seg_metrics}
         log_str=''
-        for k, v in log:
+        for k, v in log.items():
             log_str += k + ':'+v+'\n'
         self.log('val_epoch_log', log_str, prog_bar=False)
 
