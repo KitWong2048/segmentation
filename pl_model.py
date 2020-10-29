@@ -89,7 +89,7 @@ class pl_model(pl.LightningModule):
             log_str += "{}:{}, ".format(k, v)
         self.log('train_epoch_log', log_str, prog_bar=False)
                
-        return log
+        #sreturn log
         
 
     def validation_step(self, batch, batch_idx):
@@ -116,7 +116,7 @@ class pl_model(pl.LightningModule):
             log_str += "{}:{}, ".format(k, v)
         self.log('val_epoch_log', log_str, prog_bar=False)
 
-        return log
+        #return log
 
 
 
