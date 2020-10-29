@@ -38,7 +38,7 @@ class pl_model(pl.LightningModule):
         self.model = model
         self.loss = loss
         
-        _reset_metrics()
+        self._reset_metrics()
 
   
 
@@ -47,7 +47,7 @@ class pl_model(pl.LightningModule):
                
     
     def on_epoch_start(self):
-        pl_module._reset_metrics()
+        self._reset_metrics()
         
         optimizer = self.optimizers()
 
@@ -56,7 +56,7 @@ class pl_model(pl.LightningModule):
         print(f'Learning rate: {optimizer.param_groups[0]["lr"]}')
     
     def on_pre_performance_check(self):
-        pl_module._reset_metrics()
+        self._reset_metrics()
         print('\n###### EVALUATION ######')
 
 
