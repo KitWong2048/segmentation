@@ -32,9 +32,9 @@ class pl_model(pl.LightningModule):
         
         #self.save_hyperparameters(**hparams)
         self.hparams = hparams
-        print(self.hparams)
+        #print(self.hparams)
         
-        self.num_classes = hparams.num_classes
+        self.num_classes = hparams['num_classes']
         self.model = model
         self.loss = loss
         
@@ -119,10 +119,10 @@ class pl_model(pl.LightningModule):
 
 
     def configure_optimizers(self):
-        optim = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+        optim = torch.optim.Adam(self.parameters(), lr=self.hparams['optimizer']['args']['lr'])
       
         #scheduler =  getattr(torch.optim.lr_scheduler, self.hparams['lr_scheduler']['type'])(optim, **self.hparams['lr_scheduler']['args'])
-        scheduler = getattr(utils.lr_scheduler, self.hparams['lr_scheduler']['type'])(self.optimizer, **self.hparams['lr_scheduler']['args'])
+        scheduler = getattr(utils.lr_scheduler, self.hparams['lr_scheduler']['type'])(optim, **self.hparams['lr_scheduler']['args'])
 
         #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         #    optim, T_max=self.hparams.T_max, eta_min=1e-6, last_epoch=-1, verbose=False
