@@ -45,7 +45,9 @@ def main(config, arg):
     loss = getattr(losses, config['loss'])(ignore_index = config['ignore_index'])
 
     #setattr(config, 'num_classes', train_loader.dataset.num_classes)
-    print(config)
+    #print(train_loader.dataset.num_classes)
+    
+    config['num_classes'] = train_loader.dataset.num_classes
     
     model = pl_model(net, loss, config)
     
