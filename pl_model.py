@@ -78,7 +78,7 @@ class pl_model(pl.LightningModule):
         self.log('train_log', log_str, prog_bar=True) 
         #print(log_str)
         
-        #return loss
+        return loss
       
       
     def training_epoch_end(self, step_loss):
