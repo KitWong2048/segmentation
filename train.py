@@ -56,7 +56,9 @@ def main(config, arg):
         model.load_from_checkpoint(arg.resume)
     
     
-    trainer = pl.Trainer(default_root_dir=arg.checkpoints_folder, gpus="0")
+    #trainer = pl.Trainer(default_root_dir=arg.checkpoints_folder, gpus="0")
+    trainer = pl.Trainer(default_root_dir=arg.checkpoints_folder, num_tpu_cores=8)
+    
     trainer.fit(model=model,  train_dataloader=train_loader, val_dataloaders=val_loader )
     
     
