@@ -75,7 +75,7 @@ class pl_model(pl.LightningModule):
         pixAcc, mIoU, _ = self._get_seg_metrics().values()
         
         log_str = 'TRAIN ({}) | Loss: {:.3f} | Acc {:.2f} mIoU {:.2f} |'.format(self.current_epoch, self.total_loss.average, pixAcc, mIoU)
-        self.log('train_log', log_str, prog_bar=True, logger=False) 
+        self.log('train_log', log_str, prog_bar=True) 
         #print(log_str)
         
         #return loss
