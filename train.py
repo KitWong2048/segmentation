@@ -15,7 +15,7 @@ from utils.torchsummary import summary
 
 import pytorch_lightning as pl
 from pl_model import pl_model
-
+from dataloader.rsi import *
 
 seed = 1000000
 np.random.seed(seed)
@@ -33,9 +33,12 @@ def main(config, arg):
 
     # DATA LOADERS
     print("Loading train data...")
-    train_loader = get_instance(dataloaders, 'train_loader', config)
+    train_loader = get_RSI_loader( **config['train_loader']['arges']  )
+    
+    #train_loader = get_instance(dataloaders, 'train_loader', config)
     print("Loading val data...")
-    val_loader = get_instance(dataloaders, 'val_loader', config)
+    val_loader = get_RSI_loader( **config['val_loader']['args'] )
+    #val_loader = get_instance(dataloaders, 'val_loader', config)
 
     # MODEL
     net = get_instance(models, 'arch', config, train_loader.dataset.num_classes)

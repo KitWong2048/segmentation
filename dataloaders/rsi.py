@@ -99,6 +99,36 @@ class RSIFastDataset(BaseDataSet):
         label = self.labels[index]
         return image, label, image_id
 
+
+def get_RSI_loader(data_dir,data_dir, batch_size, split, crop_size=None, base_size=None, scale=True, num_workers=10, val=False,
+                    shuffle=False, flip=False, rotate=False, blur= False, augment=False, val_split= None, return_id=False):
+    MEAN = [0.45734706, 0.43338275, 0.40058118]
+    STD = [0.23965294, 0.23532275, 0.2398498]
+    
+    
+    kwargs = {
+        'root': data_dir,
+        'split': split,
+        'mean': MEAN,
+        'std': STD,
+        'augment': augment,
+        'crop_size': crop_size,
+        'base_size': base_size,
+        'scale': scale,
+        'flip': flip,
+        'blur': blur,
+        'rotate': rotate,
+        'return_id': return_id,
+        'val': val
+        }
+    
+    
+    dataset = RSIDataset(**kwargs)
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,  num_workers=num_workers)
+    return loader
+    
+
+
 class RSI(DataLoader):
     def __init__(self, data_dir, batch_size, split, crop_size=None, base_size=None, scale=True, num_workers=1, val=False,
                     shuffle=False, flip=False, rotate=False, blur= False, augment=False, val_split= None, return_id=False):

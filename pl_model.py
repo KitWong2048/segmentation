@@ -64,7 +64,6 @@ class pl_model(pl.LightningModule):
     def training_step(self, batch, batch_idx):
 
         data, target = batch
-        print(data.shape, target.shape)
         output = self.model(data)
         loss = self.loss(output, target)
 
