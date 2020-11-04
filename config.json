@@ -26,7 +26,7 @@
             "rotate": true,
             "blur": false,
             "split": "train_all",
-            "num_workers": 8
+            "num_workers": 1
         }
     },
 
@@ -38,7 +38,7 @@
             "crop_size": 256,
             "val": true,
             "split": "val",
-            "num_workers": 4
+            "num_workers": 1
         }
     },
 
