@@ -15,7 +15,7 @@ from utils.torchsummary import summary
 
 import pytorch_lightning as pl
 from pl_model import pl_model
-from dataloader.rsi import *
+from dataloaders.rsi import *
 
 seed = 1000000
 np.random.seed(seed)
