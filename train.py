@@ -33,7 +33,7 @@ def main(config, arg):
 
     # DATA LOADERS
     print("Loading train data...")
-    train_loader = get_RSI_loader( **config['train_loader']['arges']  )
+    train_loader = get_RSI_loader( **config['train_loader']['args']  )
     
     #train_loader = get_instance(dataloaders, 'train_loader', config)
     print("Loading val data...")
