@@ -100,7 +100,7 @@ class RSIFastDataset(BaseDataSet):
         return image, label, image_id
 
 
-def get_RSI_loader(data_dir,data_dir, batch_size, split, crop_size=None, base_size=None, scale=True, num_workers=10, val=False,
+def get_RSI_loader(data_dir, batch_size, split, crop_size=None, base_size=None, scale=True, num_workers=10, val=False,
                     shuffle=False, flip=False, rotate=False, blur= False, augment=False, val_split= None, return_id=False):
     MEAN = [0.45734706, 0.43338275, 0.40058118]
     STD = [0.23965294, 0.23532275, 0.2398498]
