@@ -1,5 +1,4 @@
-from base import BaseDataSet
-from torch.utils.data import DataLoader
+from base import BaseDataSet, BaseDataLoader
 from utils import palette
 import numpy as np
 import os
@@ -12,13 +11,13 @@ from torchvision import transforms
 
 class RSIDataset(BaseDataSet):
 
-    def __init__(self, **kwargs):
-        self.num_classes = 8
-        #self.palette = palette.get_voc_palette(self.num_classes)
+    def __init__(self, num_classes=14, **kwargs):
+        self.num_classes = num_classes
+        self.palette = palette.get_voc_palette(self.num_classes)
         super(RSIDataset, self).__init__(**kwargs)
 
     def _set_files(self):
-        self.root = os.path.join(self.root, 'train')
+        self.root = os.path.join(self.root, 'rematch')
         self.image_dir = os.path.join(self.root, 'image')
         self.label_dir = os.path.join(self.root, 'label')
 
@@ -30,14 +29,22 @@ class RSIDataset(BaseDataSet):
         if self.num_classes == 8:
             matches = [800, 100, 200, 300, 400, 500, 600, 700]
         elif self.num_classes == 17:
-            matches = [100, 200, 300, 400, 500, 600, 700, 800]
+            matches = [17, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        elif self.num_classes == 15:
+            matches = [17, 1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        elif self.num_classes == 14:
+            matches = [17, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
 
         h, w = label.shape
         seg_labels = np.zeros((w, h), dtype=np.uint8)
 
         for i in range(self.num_classes):
             seg_labels[label == matches[i]] = i
-            
+        
+        seg_labels[label == 0] = 0
+        if self.num_classes == 14:
+            seg_labels[label == 4] = 0
+
         return seg_labels
 
     def _load_data(self, index):
@@ -50,11 +57,38 @@ class RSIDataset(BaseDataSet):
         # image_id = self.files[index].split("/")[-1].split(".")[0]
         return image, label, image_id
 
+    def get_weights(self):
+        save_path = os.path.join(self.root, 'weights.npy')
+        if os.path.exists(save_path):
+            weights = np.load(save_path)
+            return weights
+
+        class_weight = {1:0.07, 2:0.07, 3:0.07, 4:0.02, 7:0.07, 8:0.07, 9:0.07, 10:0.07, 11:0.07, 12:0.07, 13:0.07, 14:0.07, 15:0.07, 16:0.07, 17:0.07}
+        # class_sum = {2: 1543114305, 7: 1311472725, 11: 2476695927, 13: 3064837353, 17: 473091372, 3: 2371671666, 9: 4478857437, 16: 221682972, 10: 247614603, 14: 1439428722, 8: 52628364, 12: 470929422, 1: 541517850, 15: 966983106, 4: 274176}
+        class_num = {2: 73904, 7: 28175, 11: 75679, 13: 73239, 17: 65397, 3: 64540, 9: 47947, 16: 7874, 10: 12158, 14: 44790, 8: 3101, 12: 15291, 1: 32271, 15: 20300, 4: 14}
+
+        weights = []
+        for image_id in self.files:
+            label_path = os.path.join(self.label_dir, image_id + '.png')
+            label = cv2.imread(label_path)
+            key = np.unique(label)
+
+            w = 0
+            for k in key:
+                # mask = label == k
+                # label_n = np.sum(mask)
+                w += class_weight[k] * (1 / class_num[k])
+            weights.append(w)
+
+        weights = np.asarray(weights)
+        np.save(save_path, weights)
+        return weights
+
 class RSIFastDataset(BaseDataSet):
 
     def __init__(self, **kwargs):
         self.num_classes = 8
-        #self.palette = palette.get_voc_palette(self.num_classes)
+        self.palette = palette.get_voc_palette(self.num_classes)
         super(RSIFastDataset, self).__init__(**kwargs)
 
     def _set_files(self):
@@ -99,39 +133,9 @@ class RSIFastDataset(BaseDataSet):
         label = self.labels[index]
         return image, label, image_id
 
-
-def get_RSI_loader(data_dir, batch_size, split, crop_size=None, base_size=None, scale=True, num_workers=1, val=False,
-                    shuffle=False, flip=False, rotate=False, blur= False, augment=False, val_split= None, return_id=False):
-    MEAN = [0.45734706, 0.43338275, 0.40058118]
-    STD = [0.23965294, 0.23532275, 0.2398498]
-    
-    
-    kwargs = {
-        'root': data_dir,
-        'split': split,
-        'mean': MEAN,
-        'std': STD,
-        'augment': augment,
-        'crop_size': crop_size,
-        'base_size': base_size,
-        'scale': scale,
-        'flip': flip,
-        'blur': blur,
-        'rotate': rotate,
-        'return_id': return_id,
-        'val': val
-        }
-    
-    
-    dataset = RSIDataset(**kwargs)
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,  num_workers=num_workers)
-    return loader
-    
-
-
-class RSI(DataLoader):
+class RSI(BaseDataLoader):
     def __init__(self, data_dir, batch_size, split, crop_size=None, base_size=None, scale=True, num_workers=1, val=False,
-                    shuffle=False, flip=False, rotate=False, blur= False, augment=False, val_split= None, return_id=False):
+                    shuffle=False, val_split=None, return_id=False, **kwargs):
         
         self.MEAN = [0.45734706, 0.43338275, 0.40058118]
         self.STD = [0.23965294, 0.23532275, 0.2398498]
@@ -141,13 +145,8 @@ class RSI(DataLoader):
             'split': split,
             'mean': self.MEAN,
             'std': self.STD,
-            'augment': augment,
             'crop_size': crop_size,
             'base_size': base_size,
-            'scale': scale,
-            'flip': flip,
-            'blur': blur,
-            'rotate': rotate,
             'return_id': return_id,
             'val': val
         }
@@ -157,5 +156,10 @@ class RSI(DataLoader):
         elif split in ["train", "train_all", "val", "test"]:
             self.dataset = RSIDataset(**kwargs)
         else: raise ValueError(f"Invalid split name {split}")
-        super(RSI, self).__init__(dataset=self.dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+
+        if 'train' in split:
+            weights = self.dataset.get_weights()
+        else:
+            weights = None
+        super(RSI, self).__init__(self.dataset, batch_size, shuffle, num_workers, val_split, weights)
 

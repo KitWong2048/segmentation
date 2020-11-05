@@ -11,11 +11,6 @@ import utils.lr_scheduler
 from utils.sync_batchnorm import convert_model
 from utils.sync_batchnorm import DataParallelWithCallback
 
-#import torch_xla.core.xla_model as xm
-#import torch_xla.distributed.data_parallel as dp
-
-
-
 def get_instance(module, name, config, *args):
     # GET THE CORRESPONDING CLASS / FCT 
     return getattr(module, config[name]['type'])(*args, **config[name]['args'])
@@ -34,20 +29,18 @@ class BaseTrainer:
         self.improved = True
 
         # SETTING THE DEVICE
-        '''
         self.device, availble_gpus = self._get_available_devices(self.config['n_gpu'])
         if config["use_synch_bn"]:
             self.model = convert_model(self.model)
             self.model = DataParallelWithCallback(self.model, device_ids=availble_gpus)
+
+            # self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model).to(self.device)
+            # torch.distributed.init_process_group(backend='nccl', world_size=1, init_method='tcp://127.0.0.1:12345', rank=0)
+            # # torch.distributed.init_process_group(backend='nccl', world_size=4, init_method='...')
+            # self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=availble_gpus, output_device=availble_gpus[0])
         else:
             self.model = torch.nn.DataParallel(self.model, device_ids=availble_gpus)
         self.model.to(self.device)
-        '''
-        
-        self.device = xm.get_xla_supported_devices(devkind=None, max_devices=None)
-        self.model = dp.DataParallel(self.model, device_ids=devices)
-        
-        
 
         # CONFIGS
         cfg_trainer = self.config['trainer']
@@ -56,8 +49,7 @@ class BaseTrainer:
 
         # OPTIMIZER
         if self.config['optimizer']['differential_lr']:
-            #if isinstance(self.model, torch.nn.DataParallel):
-            if isinstance(self.model, torch_xla.distributed.data_parallel.DataParallel):
+            if isinstance(self.model, torch.nn.DataParallel):
                 trainable_params = [{'params': filter(lambda p:p.requires_grad, self.model.module.get_decoder_params())},
                                     {'params': filter(lambda p:p.requires_grad, self.model.module.get_backbone_params()), 
                                     'lr': config['optimizer']['args']['lr'] / 10}]
@@ -68,7 +60,7 @@ class BaseTrainer:
         else:
             trainable_params = filter(lambda p:p.requires_grad, self.model.parameters())
         self.optimizer = get_instance(torch.optim, 'optimizer', config, trainable_params)
-        if config['lr_scheduler']['type'] == "CosineWithRestarts":
+        if config['lr_scheduler']['type'] == "CosineWithRestarts" or config['lr_scheduler']['type'] == "ReduceLROnPlateau":
             self.lr_scheduler = getattr(utils.lr_scheduler, config['lr_scheduler']['type'])(self.optimizer, **config['lr_scheduler']['args'])
         else:
             self.lr_scheduler = getattr(utils.lr_scheduler, config['lr_scheduler']['type'])(self.optimizer, self.epochs, len(train_loader))
@@ -188,6 +180,8 @@ class BaseTrainer:
         # self.optimizer.load_state_dict(checkpoint['optimizer'])
         # if self.lr_scheduler:
         #     self.lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+
+        self.lr_scheduler.step(self.start_epoch-2)
 
         # self.train_logger = checkpoint['logger']
         # self.train_logger = Logger()
