@@ -15,8 +15,8 @@
     "train_loader": {
         "type": "RSI",
         "args":{
-            "data_dir": "/home/mumu/src/rsi",
-            "batch_size": 20,
+            "data_dir": "/content/segmentation_data/",
+            "batch_size": 16,
             "base_size": 256,
             "crop_size": 256,
             "batch_stride": 1,
@@ -29,7 +29,7 @@
     "val_loader": {
         "type": "RSI",
         "args":{
-            "data_dir": "/home/mumu/src/rsi",
+            "data_dir": "/content/segmentation_data/",
             "batch_size": 8,
             "crop_size": 256,
             "val": true,
